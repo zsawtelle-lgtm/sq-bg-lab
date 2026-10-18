@@ -1,7 +1,7 @@
 # sq-bg-lab — Section Background Lab for Squarespace 7.1
 
 Static and animated section backgrounds, plus a live tuning panel you open with `?bglab`.
-SWTL Design · `github.com/zsawtelle-lgtm/sq-bg-lab` · v1.0.0
+SWTL Design · `github.com/zsawtelle-lgtm/sq-bg-lab` · v1.1.0
 
 ---
 
@@ -19,7 +19,6 @@ Settings → Advanced → Code Injection → **Footer**:
 <!-- Section backgrounds | sq-bg-lab -->
 <script>
 window.sqBgLab = {
-  accent: "#be8a2c",          // optional brand accent (gold cells, nodes, glow)
   sections: {}                // filled in by "Copy config"
 };
 </script>
@@ -27,6 +26,8 @@ window.sqBgLab = {
 ```
 
 Site must be on the **Core plan or higher** (Code Injection).
+
+**Colors come from the site.** Lines and cells use each section's text color, and the accent comes from the Squarespace palette (Site Styles → Colors). Nothing to set per site. To force a palette color, add `accent: "lightAccent"` (or `"accent"`, `"darkAccent"`, `"white"`, `"black"`, or any CSS color).
 
 ### Step 2 — Usage (once per section)
 1. Open the live site with `?noredirect&bglab`. Code Injection does not run in the editor.
@@ -52,7 +53,8 @@ Site must be on the **Core plan or higher** (Code Injection).
 | `density` | network | `1` | `0.3`–`2.5` | Node count multiplier |
 | `lines` | flow | `22` | `8`–`40` | Line count |
 | `speed` | commit, network, flow, aurora | `1` | `0.2`–`3` | Motion speed |
-| `ink` | all | section text color | any CSS color | Override the line/cell color |
+| `ink` | all | section text color | palette name or any CSS color | Override the line/cell color |
+| `accent` | all | global `accent` | palette name or any CSS color | Override the accent for one section |
 
 ### Per-site checklist
 - [ ] Core plan or higher
@@ -95,7 +97,7 @@ Every effect is a `.sbl-layer` div inside the section's `.section-background`:
 | Key | Default | Description |
 |---|---|---|
 | `sections` | `{}` | Per-section settings, keyed by `data-section-id` |
-| `accent` | section text color | Accent for gold cells, network nodes, glow, flow highlight |
+| `accent` | `auto` | `auto`, a palette name (`accent`, `lightAccent`, `darkAccent`, `white`, `black`), or any CSS color. Auto uses the palette Accent, falling back to Light Accent, then Dark Accent, whichever stands out from the section's text and background. Used for accent cells, network nodes, glow and flow highlights |
 | `mark` | site logo | Default watermark image URL |
 | `lab` | `false` | `true` opens the panel without `?bglab` (do not ship this) |
 
@@ -104,6 +106,7 @@ In lab mode, `window.sqBgLab.api` exposes `settings`, `sections`, `renderAll()`,
 
 ### Behavior
 - Dark/light is detected per section from its background color. Line color defaults to the section's text color.
+- Palette colors are read from the 7.1 CSS variables `--accent-hsl`, `--lightAccent-hsl`, `--darkAccent-hsl`, `--white-hsl`, `--black-hsl` (section first, then `:root`), so a palette change in Site Styles updates the effects automatically.
 - Motion runs at ~30fps, pauses when the section is off screen, and freezes for visitors who set "reduce motion".
 
 ---
@@ -119,6 +122,9 @@ In lab mode, `window.sqBgLab.api` exposes `settings`, `sections`, `renderAll()`,
 ### Deployed on
 - Buildkin (buildkin.squarespace.com) — lab used to choose the hero treatment; hero blueprint grid shipped as CSS-only (Custom CSS section 06).
 
+### Changelog
+- **1.1.0** — Accent and ink read from the Squarespace palette (Auto by default); palette swatches in the lab panel.
+- **1.0.0** — First release.
+
 ### Open items
-- Not yet pushed to GitHub, so the jsdelivr URL is not live yet.
 - Watermark uses the site's header logo image by default. Text-only logos need `src`.

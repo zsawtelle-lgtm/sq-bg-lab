@@ -1,17 +1,18 @@
 /*!
- * sq-bg-lab v1.0.0 — section background effects for Squarespace 7.1, with a live tuning panel.
+ * sq-bg-lab v1.1.0 — section background effects for Squarespace 7.1, with a live tuning panel.
  * SWTL Design · github.com/zsawtelle-lgtm/sq-bg-lab
  *
  * Visitors: renders the backgrounds set in window.sqBgLab.sections.
  * Lab:      add ?bglab to any page URL. A panel opens in the corner. Pick a section,
  *           pick an effect, tune it live, then "Copy config" and paste into Code Injection.
+ * Colors:   ink and accent come from the site's Squarespace palette (Site Styles → Colors) by default.
  */
 (function () {
   'use strict';
   if (window.__sqBgLabLoaded) return;
   window.__sqBgLabLoaded = true;
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   var CDN = 'https://cdn.jsdelivr.net/gh/zsawtelle-lgtm/sq-bg-lab@1/sq-bg-lab.js';
   var cfg = window.sqBgLab || {};
   var LS = 'sqBgLab:' + location.hostname;
@@ -74,6 +75,22 @@
   }
   function round(v) { return Math.round(v * 1000) / 1000; }
 
+  /* ---------------- Squarespace palette ---------------- */
+  // Site Styles → Colors palette, exposed by 7.1 as --<name>-hsl on :root and each section.
+  var PALETTE = ['accent', 'lightAccent', 'darkAccent', 'white', 'black'];
+  var PALETTE_LABELS = { accent: 'Accent', lightAccent: 'Light accent', darkAccent: 'Dark accent', white: 'White', black: 'Black' };
+  function paletteRGB(name, el) {
+    var v = el ? getComputedStyle(el).getPropertyValue('--' + name + '-hsl').trim() : '';
+    if (!v) v = getComputedStyle(document.documentElement).getPropertyValue('--' + name + '-hsl').trim();
+    return v ? rgb('hsl(' + v + ')') : null;
+  }
+  function colorRGB(c, el) {
+    if (!c || c === 'auto') return null;
+    return PALETTE.indexOf(c) > -1 ? paletteRGB(c, el) : rgb(c);
+  }
+  function dist(a, b) { var x = a.split(',').map(Number), y = b.split(',').map(Number); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]); }
+  function hex(triple) { return '#' + triple.split(',').map(function (n) { return ('0' + Math.round(+n).toString(16)).slice(-2); }).join(''); }
+
   /* ---------------- styles ---------------- */
   var css = document.createElement('style');
   css.id = 'sq-bg-lab-css';
@@ -94,7 +111,7 @@
     var textEl = s.querySelector('h1,h2,h3,h4,p') || s;
     var ink = rgb(getComputedStyle(textEl).color) || (dark ? '255,255,255' : '0,0,0');
     var name = (s.querySelector('h1,h2,h3,h4,p') || {}).textContent || '';
-    return { el: s, id: s.getAttribute('data-section-id'), host: host, dark: dark, ink: ink, name: name.trim().slice(0, 34), layer: null, kill: null };
+    return { el: s, id: s.getAttribute('data-section-id'), host: host, dark: dark, ink: ink, bg: bg, name: name.trim().slice(0, 34), layer: null, kill: null };
   }
   var secs = [];
   function scan() { secs = [].slice.call(document.querySelectorAll('section.page-section[data-section-id]')).map(sectionInfo); }
@@ -235,7 +252,18 @@
 
   /* ---------------- render ---------------- */
   var settings = clone(cfg.sections || {});
-  function accentFor(s) { return rgb(cfg.accent) || s.ink; }
+  // Accent: per-section or global setting (palette name or CSS color); "auto" picks the first
+  // palette accent that stands out from the section's text and background.
+  function accentFor(s, o) {
+    var pick = colorRGB(o && o.accent, s.el) || colorRGB(cfg.accent, s.el);
+    if (pick) return pick;
+    var tries = ['accent', 'lightAccent', 'darkAccent'];
+    for (var i = 0; i < tries.length; i++) {
+      var c = paletteRGB(tries[i], s.el);
+      if (c && dist(c, s.ink) > 70 && (!s.bg || dist(c, s.bg) > 70)) return c;
+    }
+    return s.ink;
+  }
   function renderSection(s) {
     if (s.kill) { s.kill(); s.kill = null; }
     if (s.layer) { s.layer.remove(); s.layer = null; }
@@ -243,9 +271,9 @@
     if (!set || !set.effect || set.effect === 'none' || !R[set.effect]) return;
     var o = full(set), L = document.createElement('div');
     L.className = 'sbl-layer'; s.host.appendChild(L); s.layer = L;
-    var ink = rgb(o.ink) || s.ink;
+    var ink = colorRGB(o.ink, s.el) || s.ink;
     if (EFFECTS[o.effect].fade && o.fade !== false) fade(L, o);
-    s.kill = R[o.effect](L, o, ink, s, accentFor(s)) || null;
+    s.kill = R[o.effect](L, o, ink, s, accentFor(s, o)) || null;
   }
   function renderAll() { secs.forEach(renderSection); }
 
@@ -272,7 +300,7 @@
     Object.keys(settings).forEach(function (id) {
       var set = settings[id]; if (!set || !set.effect) return;
       var o = full(set), s = secs.filter(function (x) { return x.id === id; })[0]; if (!s) return;
-      var ink = rgb(o.ink) || s.ink, sel = '[data-section-id="' + id + '"]';
+      var ink = colorRGB(o.ink, s.el) || s.ink, sel = '[data-section-id="' + id + '"]';
       var mask = EFFECTS[o.effect].fade && o.fade !== false ? '  -webkit-mask-image: ~"radial-gradient(ellipse 85% 95% at var(--bg-focus-x) var(--bg-focus-y), #000 10%, transparent var(--bg-reach))";\n  mask-image: ~"radial-gradient(ellipse 85% 95% at var(--bg-focus-x) var(--bg-focus-y), #000 10%, transparent var(--bg-reach))";\n' : '';
       var vars = '  --bg-color: ' + ink.split(',').join(', ') + ';    /* R, G, B */\n  --bg-intensity: ' + round(o.intensity) + ';\n' + (mask ? '  --bg-focus-x: ' + o.focusX + '%;\n  --bg-focus-y: ' + o.focusY + '%;\n  --bg-reach: ' + o.reach + '%;\n' : '');
       if (o.effect === 'grid') {
@@ -306,6 +334,7 @@
       '#sbl-panel input[type=text]{width:100%;padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#f3efe6;font:500 12px system-ui}' +
       '#sbl-panel input[type=color]{width:34px;height:26px;border:0;background:none;padding:0;cursor:pointer}' +
       '#sbl-panel .row{display:flex;align-items:center;gap:8px;margin-top:6px}' +
+      '#sbl-panel .sw button{display:inline-flex;align-items:center;gap:6px}#sbl-panel .sw i{width:11px;height:11px;border-radius:50%;display:inline-block;box-shadow:0 0 0 1px rgba(255,255,255,.35)}' +
       '#sbl-panel textarea{width:100%;height:120px;margin-top:8px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:#0b100d;color:#cfe3d6;font:11px/1.45 ui-monospace,Menlo,monospace;resize:vertical}' +
       '#sbl-panel.min .b{display:none}' +
       '#sbl-panel .tgt{padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.05);color:rgba(243,239,230,.85)}' +
@@ -325,7 +354,8 @@
       '<h6>Motion</h6><div class="p">' + group('Motion') + btn('effect', 'none', 'Off') + '</div>' +
       '<div class="d"></div>' +
       '<div class="ctl"></div>' +
-      '<h6>Accent color</h6><div class="row"><input type="color" data-a="accent"><span class="acc-v" style="color:rgba(243,239,230,.7)"></span></div>' +
+      '<h6>Accent · site palette</h6><div class="p sw">' + ['auto'].concat(PALETTE).map(function (n) { var c = n === 'auto' ? null : paletteRGB(n); return n === 'auto' || c ? '<button data-acc="' + n + '">' + (c ? '<i style="background:rgb(' + c + ')"></i>' : '') + (n === 'auto' ? 'Auto' : PALETTE_LABELS[n]) + '</button>' : ''; }).join('') + '</div>' +
+      '<div class="row"><input type="color" data-a="accent" title="Custom color"><span class="acc-v" style="color:rgba(243,239,230,.7)"></span></div>' +
       '<h6>Export</h6><div class="p"><button data-a="copy">Copy config</button><button data-a="css">Copy CSS</button><button data-a="reset">Reset section</button></div>' +
       '<textarea readonly spellcheck="false"></textarea>' +
       '</div>';
@@ -350,9 +380,10 @@
         if (e === 'mark') h += '<label>Image URL (blank = site logo)</label><input type="text" data-t="src" value="' + (o.src || '') + '" placeholder="https://…/mark.svg">';
       }
       $('.ctl').innerHTML = h;
-      var acc = cfg.accent || '#d9a441';
-      $('input[data-a=accent]').value = /^#[0-9a-f]{6}$/i.test(acc) ? acc : '#d9a441';
-      $('.acc-v').textContent = cfg.accent || 'not set (uses text color)';
+      var acc = cfg.accent || 'auto', accRGB = colorRGB(acc) || (targets[0] ? accentFor(targets[0], c) : null);
+      P.querySelectorAll('button[data-acc]').forEach(function (b) { b.classList.toggle('on', b.dataset.acc === acc); });
+      if (accRGB) $('input[data-a=accent]').value = hex(accRGB);
+      $('.acc-v').textContent = acc === 'auto' ? 'Auto: first palette accent that stands out' : PALETTE_LABELS[acc] ? PALETTE_LABELS[acc] + ' (from Site Styles)' : acc + ' (custom)';
     }
     function setTargets(list) {
       secs.forEach(function (s) { s.el.classList.remove('sbl-picked'); });
@@ -387,6 +418,10 @@
         if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = a === 'copy' ? 'Copy config' : 'Copy CSS'; }, 1200); }, function () {});
         $('textarea').select(); return;
       }
+      if (b.dataset.acc) {
+        cfg.accent = b.dataset.acc === 'auto' ? '' : b.dataset.acc;
+        renderAll(); persist(); drawControls(); $('textarea').value = configSnippet(); return;
+      }
       if (b.dataset.k === 'effect') {
         if (!targets.length) return;
         var v = b.dataset.v;
@@ -398,7 +433,7 @@
     var tmr;
     P.addEventListener('input', function (e) {
       var t = e.target;
-      if (t.dataset.a === 'accent') { cfg.accent = t.value; $('.acc-v').textContent = t.value; clearTimeout(tmr); tmr = setTimeout(function () { renderAll(); persist(); $('textarea').value = configSnippet(); }, 120); return; }
+      if (t.dataset.a === 'accent') { cfg.accent = t.value; P.querySelectorAll('button[data-acc]').forEach(function (b) { b.classList.remove('on'); }); $('.acc-v').textContent = t.value + ' (custom)'; clearTimeout(tmr); tmr = setTimeout(function () { renderAll(); persist(); $('textarea').value = configSnippet(); }, 120); return; }
       var k = t.dataset.p || t.dataset.t; if (!k || !targets.length) return;
       var val = t.dataset.p ? parseFloat(t.value) : t.value;
       each(function (set) { set[k] = val; });
