@@ -1,6 +1,6 @@
 /*!
- * sq-bg-lab v1.1.0 — section background effects for Squarespace 7.1, with a live tuning panel.
- * SWTL Design · github.com/zsawtelle-lgtm/sq-bg-lab
+ * sq-bg-lab v1.1.1 — section background effects for Squarespace 7.1, with a live tuning panel.
+ * SWTL Design · github.com/swtldesignco/sq-bg-lab
  *
  * Visitors: renders the backgrounds set in window.sqBgLab.sections.
  * Lab:      add ?bglab to any page URL. A panel opens in the corner. Pick a section,
@@ -12,8 +12,8 @@
   if (window.__sqBgLabLoaded) return;
   window.__sqBgLabLoaded = true;
 
-  var VERSION = '1.1.0';
-  var CDN = 'https://cdn.jsdelivr.net/gh/zsawtelle-lgtm/sq-bg-lab@1/sq-bg-lab.js';
+  var VERSION = '1.1.1';
+  var CDN = 'https://cdn.jsdelivr.net/gh/swtldesignco/sq-bg-lab@1/sq-bg-lab.js';
   var cfg = window.sqBgLab || {};
   var LS = 'sqBgLab:' + location.hostname;
   var reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);

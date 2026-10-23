@@ -1,7 +1,7 @@
 # sq-bg-lab — Section Background Lab for Squarespace 7.1
 
 Static and animated section backgrounds, plus a live tuning panel you open with `?bglab`.
-SWTL Design · `github.com/zsawtelle-lgtm/sq-bg-lab` · v1.1.0
+SWTL Design · `github.com/swtldesignco/sq-bg-lab` · v1.1.1
 
 ---
 
@@ -22,7 +22,7 @@ window.sqBgLab = {
   sections: {}                // filled in by "Copy config"
 };
 </script>
-<script src="https://cdn.jsdelivr.net/gh/zsawtelle-lgtm/sq-bg-lab@1/sq-bg-lab.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/swtldesignco/sq-bg-lab@1/sq-bg-lab.js"></script>
 ```
 
 Site must be on the **Core plan or higher** (Code Injection).
